@@ -1,5 +1,4 @@
 "use client";
-
 import * as z from "zod";
 import axios from "axios";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -7,9 +6,6 @@ import { useForm } from "react-hook-form";
 import { Pencil } from "lucide-react";
 import { useState } from "react";
 import toast from "react-hot-toast";
-import { useRouter } from "next/navigation";
-import { Course } from "@prisma/client";
-
 import {
   Form,
   FormControl,
@@ -18,61 +14,53 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Button } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
-import { Textarea } from "@/components/ui/textarea";
-
-interface DescriptionFormProps {
+import { cn } from "@/lib/utils"; 
+import { Input } from "@/components/ui/input";
+import { formatPrice } from "@/lib/format";
+import { Course } from "@prisma/client";
+import { useRouter } from "next/navigation";
+interface PriceFormProps {
   initialData: Course;
   courseId: string;
 };
-
 const formSchema = z.object({
-  description: z.string().min(1, {
-    message: "Description is required",
-  }),
+  price: z.coerce.number(),
 });
-
-export const DescriptionForm = ({
+export  const PriceForm = ({
   initialData,
   courseId
-}: DescriptionFormProps) => {
+}: PriceFormProps)=> {
   const [isEditing, setIsEditing] = useState(false);
-
   const toggleEdit = () => setIsEditing((current) => !current);
-
   const router = useRouter();
-
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      description: initialData?.description || ""
+      price: initialData?.price || undefined
     },
   });
-
   const { isSubmitting, isValid } = form.formState;
-
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
     try {
       await axios.put(`/api/courses/${courseId}`, values);
-      toast.success("Course updated");
+      toast.success("Price updated");
       toggleEdit();
       router.refresh();
     } catch {
       toast.error("Something went wrong");
     }
   }
-
   return (
     <div className="mt-6 border bg-slate-100 rounded-md p-4 dark:bg-gray-800">
       <div className="font-medium flex items-center justify-between">
-        Course description
+        Course price
         <Button onClick={toggleEdit} variant="ghost">
           {isEditing ? (
             <>Cancel</>
           ) : (
             <>
               <Pencil className="h-4 w-4 mr-2" />
-              Edit description
+              Edit price
             </>
           )}
         </Button>
@@ -80,9 +68,12 @@ export const DescriptionForm = ({
       {!isEditing && (
         <p className={cn(
           "text-sm mt-2",
-          !initialData.description && "text-slate-500 italic"
+          !initialData.price && "text-slate-500 italic"
         )}>
-          {initialData.description || "No description"}
+          {initialData.price 
+            ? formatPrice(initialData.price)
+            : "No price"         
+          }
         </p>
       )}
       {isEditing && (
@@ -93,13 +84,15 @@ export const DescriptionForm = ({
           >
             <FormField
               control={form.control}
-              name="description"
+              name="price"
               render={({ field }) => (
                 <FormItem>
                   <FormControl>
-                    <Textarea
+                    <Input
+                      type="number"
+                      step="0.01"
                       disabled={isSubmitting}
-                      placeholder="e.g. 'This course is about...'"
+                      placeholder="Set a price for your course"
                       {...field}
                     />
                   </FormControl>
@@ -115,6 +108,7 @@ export const DescriptionForm = ({
                 Save
               </Button>
             </div>
+            
           </form>
         </Form>
       )}
