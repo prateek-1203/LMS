@@ -8,7 +8,6 @@ import { Pencil } from "lucide-react";
 import { useState } from "react";
 import toast from "react-hot-toast";
 import { useRouter } from "next/navigation";
-import { Course } from "@prisma/client";
 
 import {
   Form,
@@ -17,25 +16,28 @@ import {
   FormItem,
   FormMessage,
 } from "@/components/ui/form";
+import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
-import { Combobox } from "@/components/ui/combobox";
 
-interface CategoryFormProps {
-  initialData: Course;
+interface ChapterTitleFormProps {
+  initialData: {
+    title: string;
+  };
   courseId: string;
-  options: {label:string; value: string;}[];
+  chapterId: string;
 };
 
 const formSchema = z.object({
-    categoryId: z.string().min(1),
+  title: z.string().min(1, {
+    message: "Title is required",
+  }),
 });
 
-export const CategoryForm = ({
+export const ChapterTitleForm = ({
   initialData,
   courseId,
-  options,
-}: CategoryFormProps) => {
+  chapterId
+}: ChapterTitleFormProps) => {
   const [isEditing, setIsEditing] = useState(false);
 
   const toggleEdit = () => setIsEditing((current) => !current);
@@ -44,66 +46,69 @@ export const CategoryForm = ({
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
-    defaultValues: {
-      categoryId: initialData?.categoryId || ""
-    },
+    defaultValues: initialData,
   });
 
   const { isSubmitting, isValid } = form.formState;
 
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
     try {
-      await axios.patch(`/api/courses/${courseId}`, values);
-      toast.success("Course updated");
+      await axios.patch(`/api/courses/${courseId}/chapters/${chapterId}`, values);
+      toast.success("Chapter title updated");
       toggleEdit();
       router.refresh();
-    } catch {
-      toast.error("Something went wrong");
-    }
-  }
-
-  const selectedOption= options.find((option)=> option.value === initialData.categoryId);
+    } catch (error : any) {
+        if (error.response) {
+          // The request was made and the server responded with a status code
+          // that falls out of the range of 2xx
+          toast.error(`Server responded with ${error.response.status} error`);
+        } else if (error.request) {
+          // The request was made but no response was received
+          toast.error("No response received from server");
+        } else {
+          // Something happened in setting up the request that triggered an Error
+          toast.error(`Error: ${error.message}`);
+        }
+      }
+  };
 
   return (
-    <div className="mt-6 border bg-slate-100 rounded-md p-4 dark:bg-gray-800">
+    <div className="mt-6 bg-slate-100 rounded-md p-4 dark:bg-gray-800">
       <div className="font-medium flex items-center justify-between">
-        Course category
+        Course Title
         <Button onClick={toggleEdit} variant="ghost">
           {isEditing ? (
             <>Cancel</>
           ) : (
             <>
               <Pencil className="h-4 w-4 mr-2" />
-              Edit category
+              Edit title
             </>
           )}
         </Button>
       </div>
       {!isEditing && (
-        <p className={cn(
-          "text-sm mt-2",
-          !initialData.categoryId && "text-slate-500 italic"
-        )}>
-          {selectedOption?.label || "No category"}
+        <p className="text-sm mt-2 dark:text-gray-300">
+          {initialData?.title}
         </p>
       )}
       {isEditing && (
         <Form {...form}>
           <form
             onSubmit={form.handleSubmit(onSubmit)}
-            className="space-y-4 mt-4"
+            className="space-y-4 mt-4 dark:text-gray-300"
           >
             <FormField
               control={form.control}
-              name="categoryId"
+              name="title"
               render={({ field }) => (
                 <FormItem>
                   <FormControl>
-                   <Combobox
-                   options={options}
-                   disabled={isSubmitting}
-                   {...field}
-                   />
+                    <Input
+                      disabled={isSubmitting}
+                      placeholder="e.g. 'Advanced web development'"
+                      {...field}
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>

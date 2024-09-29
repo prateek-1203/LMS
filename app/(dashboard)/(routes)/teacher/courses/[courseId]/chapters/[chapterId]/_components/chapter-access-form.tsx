@@ -1,5 +1,4 @@
 "use client";
-
 import * as z from "zod";
 import axios from "axios";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -8,73 +7,62 @@ import { Pencil } from "lucide-react";
 import { useState } from "react";
 import toast from "react-hot-toast";
 import { useRouter } from "next/navigation";
-import { Course } from "@prisma/client";
-
+import { Chapter } from "@prisma/client";
 import {
   Form,
   FormControl,
+  FormDescription,
   FormField,
   FormItem,
   FormMessage,
 } from "@/components/ui/form";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { Combobox } from "@/components/ui/combobox";
-
-interface CategoryFormProps {
-  initialData: Course;
+ import { Checkbox } from "@/components/ui/checkbox";
+interface ChapterAccessFormProps {
+  initialData: Chapter;
   courseId: string;
-  options: {label:string; value: string;}[];
+  chapterId: string;
 };
-
 const formSchema = z.object({
-    categoryId: z.string().min(1),
+  isFree: z.boolean().default(false),
 });
-
-export const CategoryForm = ({
+export const ChapterAccessForm = ({
   initialData,
   courseId,
-  options,
-}: CategoryFormProps) => {
+  chapterId
+}: ChapterAccessFormProps) => {
   const [isEditing, setIsEditing] = useState(false);
-
   const toggleEdit = () => setIsEditing((current) => !current);
-
   const router = useRouter();
-
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      categoryId: initialData?.categoryId || ""
+      isFree: initialData?.isFree || false
     },
   });
-
   const { isSubmitting, isValid } = form.formState;
-
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
     try {
-      await axios.patch(`/api/courses/${courseId}`, values);
-      toast.success("Course updated");
+      await axios.patch(`/api/courses/${courseId}/chapters/${chapterId}`, values);
+      toast.success("Chapter updated");
       toggleEdit();
       router.refresh();
     } catch {
       toast.error("Something went wrong");
     }
   }
-
-  const selectedOption= options.find((option)=> option.value === initialData.categoryId);
-
   return (
     <div className="mt-6 border bg-slate-100 rounded-md p-4 dark:bg-gray-800">
       <div className="font-medium flex items-center justify-between">
-        Course category
+        Chapter Access
         <Button onClick={toggleEdit} variant="ghost">
           {isEditing ? (
             <>Cancel</>
           ) : (
             <>
               <Pencil className="h-4 w-4 mr-2" />
-              Edit category
+              Edit chapter access
             </>
           )}
         </Button>
@@ -82,9 +70,14 @@ export const CategoryForm = ({
       {!isEditing && (
         <p className={cn(
           "text-sm mt-2",
-          !initialData.categoryId && "text-slate-500 italic"
+          !initialData.isFree && "text-slate-700 italic dark:text-slate-300"
         )}>
-          {selectedOption?.label || "No category"}
+     
+          {initialData.isFree ? (
+            <>This chapter is available for free preview</>
+          ) : (
+            <>This chapter is not free.</>
+          )}
         </p>
       )}
       {isEditing && (
@@ -95,17 +88,20 @@ export const CategoryForm = ({
           >
             <FormField
               control={form.control}
-              name="categoryId"
+              name="isFree"
               render={({ field }) => (
-                <FormItem>
+                <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4">
                   <FormControl>
-                   <Combobox
-                   options={options}
-                   disabled={isSubmitting}
-                   {...field}
-                   />
+                    <Checkbox
+                      checked={field.value}
+                      onCheckedChange = {field.onChange}
+                    />
                   </FormControl>
-                  <FormMessage />
+                  <div className="space-y-1 leading-none">
+                    <FormDescription>
+                        Check this box if you want to make this chapter free for preview.
+                    </FormDescription>
+                  </div>
                 </FormItem>
               )}
             />

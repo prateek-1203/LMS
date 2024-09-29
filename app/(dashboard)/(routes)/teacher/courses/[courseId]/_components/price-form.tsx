@@ -42,7 +42,7 @@ export  const PriceForm = ({
   const { isSubmitting, isValid } = form.formState;
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
     try {
-      await axios.put(`/api/courses/${courseId}`, values);
+      await axios.patch(`/api/courses/${courseId}`, values);
       toast.success("Price updated");
       toggleEdit();
       router.refresh();
