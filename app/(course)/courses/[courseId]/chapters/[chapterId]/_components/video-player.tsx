@@ -26,26 +26,27 @@ export const VideoPlayer = ({
     title,
 }: VideoPlayerProps) => {
     const [isReady, setIsReady] = useState(false);
-    // const router = useRouter();
-    // const confetti = useConfettiStore();
-    // const onEnd = async () => {
-    //     try {
-    //         if (completeOnEnd) {
-    //             await axios.put(`/api/courses/${courseId}/chapters/${chapterId}/progress`, {
-    //                 isCompleted: true,
-    //             });
-    //             if (!nextChapterId) {
-    //                 confetti.onOpen();
-    //             }
-    //             toast.success("Progress updated");
-    //             router.refresh();
-    //             if (nextChapterId) {
-    //                 router.push(`/courses/${courseId}/chapters/${nextChapterId}`)
-    //             }
-    //         }
-    //     } catch {
-    //         toast.error("Something went wrong");
-    //     }
+    const router = useRouter();
+    const confetti = useConfettiStore();
+    const onEnd = async () => {
+        try {
+            if (completeOnEnd) {
+                await axios.put(`/api/courses/${courseId}/chapters/${chapterId}/progress`, {
+                    isCompleted: true,
+                });
+                if (!nextChapterId) {
+                    confetti.onOpen();
+                }
+                toast.success("Progress updated");
+                router.refresh();
+                if (nextChapterId) {
+                    router.push(`/courses/${courseId}/chapters/${nextChapterId}`)
+                }
+            }
+        } catch {
+            toast.error("Something went wrong");
+        }
+    }
     
     return (
          <div className="relative aspect-video">
@@ -71,7 +72,7 @@ export const VideoPlayer = ({
                         !isReady && "hidden"
                     )}
                     onCanPlay={() => setIsReady(true)}
-                    onEnded={()=>{}}
+                    onEnded={onEnd}
                     autoPlay
                     playbackId={playbackId}
                 />
