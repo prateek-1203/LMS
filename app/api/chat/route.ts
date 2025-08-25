@@ -1,6 +1,5 @@
-
 import { NextRequest, NextResponse } from "next/server";
-import { db } from "@/lib/db"; 
+import { db } from "@/lib/db";
 
 export async function POST(req: NextRequest) {
   try {
@@ -8,29 +7,44 @@ export async function POST(req: NextRequest) {
 
     // Fetch course titles from DB
     const courses = await db.course.findMany({
+      where: { isPublished: true },
       select: { title: true },
     });
 
-    const courseNames = courses.map((c, i) => `${i + 1}. ${c.title}`).join("\n");
+    const courseList = courses.length > 0
+      ? courses.map((c, i) => `${i + 1}. ${c.title}`).join("\n")
+      : "No published courses available at the moment.";
 
+    //  System Prompt with actual LMS context
     const messages = [
       {
         role: "system",
         content: `
-You are a smart, friendly AI assistant for a Learning Management System (LMS).
+You are an AI assistant built into a real Learning Management System (LMS).
 
- LMS Context:
-- You help users with courses, dashboard, progress, quizzes, and general study help.
-- You must **only mention courses from the actual list** below.
-- Do NOT make up or assume any course names not present here.
+Your job is to assist users only with LMS-specific features and information.
 
- Available Courses:
-${courseNames || "No courses available at the moment."}
+### LMS Features:
+- Authentication (via Clerk)
+- Course Creation (title, description, image, price, category, attachments)
+- Chapter Creation (with videos using Mux)
+- Course & Chapter Editing and Publishing
+- Video Player with HLS Support
+- Reordering Chapters
+- Chapter Progress Tracking
+- Stripe-based Payment Integration
+- Student Dashboard
+- Teacher Analytics Dashboard
+- Student Review System
+- Ask AI Assistant (You)
 
-If users ask about available courses, show only this list. If they ask about progress, quizzes, or LMS features, guide them clearly.
+### Available Courses:
+${courseList}
 
-Be short, helpful, and friendly in responses.
-      `.trim(),
+❗ DO NOT mention or invent any features like quizzes, certifications, assignments, or exams unless they are listed above.
+
+Only reply based on the context and data provided above. Be short, friendly, and helpful in tone.
+`.trim(),
       },
       {
         role: "user",
@@ -38,15 +52,16 @@ Be short, helpful, and friendly in responses.
       },
     ];
 
+//   Call OpenRouter API
     const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
       method: "POST",
       headers: {
-        "Authorization": `Bearer ${process.env.OPENROUTER_API_KEY}`,
+        Authorization: `Bearer ${process.env.OPENROUTER_API_KEY}`,
         "Content-Type": "application/json",
-        "HTTP-Referer": "https://your-lms-domain.com", 
+        "HTTP-Referer": "https://your-lms-domain.com", // update with real domain
       },
       body: JSON.stringify({
-        model: "qwen/qwen3-coder:free",
+        model: "google/gemini-2.0-flash-exp:free", // or other supported model
         messages,
       }),
     });
